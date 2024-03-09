@@ -3,12 +3,18 @@ const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 const Course = require('../models/Course');
 
 const router = express.Router();
+const Notification = require("../models/Notification");
 
 // Create a course (Admin only)
 router.post('/', [verifyToken, checkRole(['Admin'])], async (req, res) => {
     try {
         let course = new Course({ ...req.body });
         await course.save();
+        const notifications = {
+            user: course.faculty,
+            message: `New course added, ${course.name}.`,
+            }
+        await Notification.insertMany(notifications);
         res.send(course);
     } catch (error) {
         res.status(500).send('Server error');
@@ -49,6 +55,12 @@ router.put('/:id', [verifyToken, checkRole(['Admin'])], async (req, res) => {
 
         // Update course with new values. Only fields provided in the request body will be updated.
         course = await Course.findByIdAndUpdate(id, { $set: req.body }, { new: true });
+
+        const notifications = {
+            user: course.faculty,
+            message: `${course.name}, course updated.`,
+            }
+        await Notification.insertMany(notifications);
         res.send(course);
     } catch (error) {
         console.error(error.message);
@@ -61,7 +73,11 @@ router.delete('/:id', [verifyToken, checkRole(['Admin'])], async (req, res) => {
     try {
         const course = await Course.findByIdAndDelete(req.params.id);
         if (!course) return res.status(404).send('Course not found');
-
+        const notifications = {
+            user: course.faculty,
+            message: `${course.name}, course deleted.`,
+            }
+        await Notification.insertMany(notifications);
         res.send({ message: 'Course deleted successfully' });
     } catch (error) {
         console.error(error.message);

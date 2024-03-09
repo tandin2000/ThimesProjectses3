@@ -3,6 +3,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const Room = require('../models/Room');
 const Booking = require('../models/Booking');
 const router = express.Router();
+const Notification = require("../models/Notification");
 
 // Book a room (Example route)
 router.post('/', verifyToken, async (req, res) => {
@@ -31,6 +32,16 @@ router.post('/', verifyToken, async (req, res) => {
 
     try {
         await booking.save();
+
+        const affectedUser = booking.user.toString();
+        if (affectedUser) {
+            const notifications = {
+                user: affectedUser,
+                message: `New booking logged`,
+                }
+            await Notification.insertMany(notifications);
+        }
+
         res.send(booking);
     } catch (error) {
         console.error(error.message);
@@ -65,16 +76,24 @@ router.get('/:id', verifyToken, async (req, res) => {
 // Delete a booking by ID
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
-        const booking = await Booking.findById(req.params.id);
+        const booking = await Booking.findById(req.params.id).populate('room', 'name');
 
         if (!booking) {
             return res.status(404).send('Booking not found');
         }
         // Assuming req.user is populated by the verifyToken middleware
         // and it includes the user's id and isAdmin flag
-        console.log(booking.user, req.user)
         if (booking.user.toString() === req.user._id || req.user.role === "Admin") {
             await Booking.findByIdAndDelete(req.params.id);
+            const affectedUser = booking.user.toString();
+            console.log(booking.room.name)
+            if (affectedUser) {
+                const notifications = {
+                    user: affectedUser,
+                    message: `The Booking canceled for  ${booking.room.name}.`,
+                    }
+                await Notification.insertMany(notifications);
+            }
             res.send('Booking deleted successfully');
         }else{
             return res.status(401).send('Unauthorized: Cannot delete another user\'s booking unless admin');

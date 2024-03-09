@@ -2,23 +2,40 @@ const express = require('express');
 const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
-// Include other required models
-
+const User = require('../models/User');
+const Notification = require('../models/Notification')
 const router = express.Router();
 
 // Enroll in a course (Students)
 router.post('/', verifyToken, async (req, res) => {
-    const { course } = req.body;
-    const student = req.user._id; // Assuming user ID is attached to the request by the auth middleware
-
-    const existingEnrollment = await Enrollment.findOne({ student, course });
-    if (existingEnrollment) {
-        return res.status(400).send('Student is already enrolled in this course.');
-    }
-
-    const enrollment = new Enrollment({ student, course });
+    const { course, student } = req.body;
     try {
+        const user = await User.findById(student);
+        if (!user){
+            return res.status(404).send('User not found');
+        }
+        if(user.role !== "Student"){
+            return res.status(400).send('Only applicable to Students');
+        }
+
+        const courseDetails = await Course.findById(course).exec();
+        if (!courseDetails) {
+            return res.status(404).send('Course not found');
+        }
+
+
+        const existingEnrollment = await Enrollment.findOne({ student, course });
+        if (existingEnrollment) {
+            return res.status(400).send('Student is already enrolled in this course.');
+        }
+
+        const enrollment = new Enrollment({ student, course });
         await enrollment.save();
+        const notifications = {
+            user: student,
+            message: `${courseDetails.name} has been assigned.`,
+            }
+        await Notification.insertMany(notifications);
         res.status(201).send(enrollment);
     } catch (error) {
         console.error(error.message);
@@ -28,9 +45,13 @@ router.post('/', verifyToken, async (req, res) => {
 
 // View enrollments for a student (Students, Faculty, Admins)
 router.get('/my-enrollments', [verifyToken], async (req, res) => {
-    const studentId = req.user._id; // Use this for students. For faculty/admins, they might specify a student ID in the request
-
+    let studentId
     try {
+    if(req.user.role === "Admin" || req.user.role === "Faculty" ){
+        studentId = req.body.studentId;
+    }else{
+       studentId = req.user._id;
+    }    
         const enrollments = await Enrollment.find({ student: studentId }).populate('course', 'name code');
         res.send(enrollments);
     } catch (error) {
@@ -43,8 +64,36 @@ router.get('/my-enrollments', [verifyToken], async (req, res) => {
 router.get('/course/:courseId', [verifyToken, checkRole(['Faculty', 'Admin'])], async (req, res) => {
     try {
         const { courseId } = req.params;
-        const enrollments = await Enrollment.find({ course: courseId }).populate('student', 'username');
+        const enrollments = await Enrollment.find({ course: courseId }).populate('student course', 'username name');
         res.send(enrollments);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server error');
+    }
+});
+
+
+
+
+// Delete an enrollment by ID (Admins, Faculty)
+router.delete('/:enrollmentId', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, res) => {
+    const { enrollmentId } = req.params;
+
+    try {
+        // Attempt to delete the specified enrollment
+        const deletedEnrollment = await Enrollment.findByIdAndDelete(enrollmentId).populate('course', '_id name');
+
+        if (!deletedEnrollment) {
+            return res.status(404).send('Enrollment not found');
+        }
+
+        const notifications = {
+            user: deletedEnrollment.student,
+            message: `${deletedEnrollment.course.name} has been removed.`,
+            }
+        await Notification.insertMany(notifications);
+
+        res.status(200).send(`Enrollment deleted successfully.`);
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server error');
