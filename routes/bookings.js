@@ -86,7 +86,6 @@ router.delete('/:id', verifyToken, async (req, res) => {
         if (booking.user.toString() === req.user._id || req.user.role === "Admin") {
             await Booking.findByIdAndDelete(req.params.id);
             const affectedUser = booking.user.toString();
-            console.log(booking.room.name)
             if (affectedUser) {
                 const notifications = {
                     user: affectedUser,

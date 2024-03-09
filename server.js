@@ -46,19 +46,13 @@ async function loadInitialData() {
             // If no data exists, insert initialRooms data
             await Room.insertMany(initialRooms);
             console.log('Initial room data has been successfully loaded into the database');
-        } else {
-            // If data already exists, log a message and do not insert
-            console.log('Initial room data already exists in the database. No new data added.');
         }
 
         if(count2 === 0) {
             // If no data exists, insert initialResources data
             await Resource.insertMany(initialResources);
             console.log('Initial resource data has been successfully loaded into the database');
-        } else {
-            // If data already exists, log a message and do not insert
-            console.log('Initial resource data already exists in the database. No new data added.');
-        }
+        } 
     } catch (err) {
         console.error('An error occurred while loading initial data:', err);
     }
