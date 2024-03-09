@@ -1,0 +1,50 @@
+config:
+  target: 'http://localhost:5000' # Change to your application's URL
+  phases:
+    - duration: 60 # Test duration in seconds
+      arrivalRate: 5 # New virtual users per second
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+scenarios:
+  - name: "User Login to Get Token"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "admin@123"
+          capture:
+            json: "$.token"
+            as: "loginToken"
+  - name: "Create Booking"
+    flow:
+      - log: "Using token {{ loginToken }}"
+      - post:
+          url: "/api/bookings/"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          json:
+            room: "65ec2c74fd77c06443740b19"
+            resources: ["65ec2d65957f3b0099bef86c", "65ec2d65957f3b0099bef86d"]
+            startTime: "2023-03-10T10:00:00.000Z"
+            endTime: "2023-03-10T12:00:00.000Z"
+            user: "65eb9ad0509e37af92c73073"
+  - name: "Get All Bookings"
+    flow:
+      - get:
+          url: "/api/bookings"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+  - name: "Get Single Booking"
+    flow:
+      - get:
+          url: "/api/bookings/BookingID123" # Use an actual booking ID
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+  - name: "Delete Booking"
+    flow:
+      - delete:
+          url: "/api/bookings/BookingIDToDelete" # Use an actual booking ID to delete
+          headers:
+            Authorization: "Bearer {{ loginToken }}"

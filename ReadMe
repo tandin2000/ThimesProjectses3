@@ -1,0 +1,5 @@
+To run artillery.io : cd test -> artillery run test.yml
+
+To run test files : npm test
+
+To run the application : npm run start
