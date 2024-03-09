@@ -4,6 +4,9 @@ const Room = require('../models/Room');
 const Booking = require('../models/Booking');
 const router = express.Router();
 const Notification = require("../models/Notification");
+const logger = require('../logger');
+
+
 
 // Book a room (Example route)
 router.post('/', verifyToken, async (req, res) => {
@@ -18,6 +21,8 @@ router.post('/', verifyToken, async (req, res) => {
     });
 
     if (overlap) {
+        logger.info('Room is already booked for the specified time range');
+
         return res.status(400).send('Room is already booked for the specified time range.');
     }
 
@@ -44,7 +49,7 @@ router.post('/', verifyToken, async (req, res) => {
 
         res.send(booking);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -55,7 +60,7 @@ router.get('/', verifyToken, async (req, res) => {
         const bookings = await Booking.find().populate('room resources user', 'name name username');
         res.json(bookings);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -64,11 +69,14 @@ router.get('/', verifyToken, async (req, res) => {
 router.get('/:id', verifyToken, async (req, res) => {
     try {
         const bookings = await Booking.findById(req.params.id).populate('room resources user', 'name name username');
-        if (!bookings) return res.status(404).send('Bookings not found');
+        if (!bookings) {
+            logger.info("Bookings not found")
+            return res.status(404).send('Bookings not found');
+        };
 
         res.send(bookings);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -79,9 +87,9 @@ router.delete('/:id', verifyToken, async (req, res) => {
         const booking = await Booking.findById(req.params.id).populate('room', 'name');
 
         if (!booking) {
+            logger.info("Bookings not found")
             return res.status(404).send('Booking not found');
         }
-        // Assuming req.user is populated by the verifyToken middleware
         // and it includes the user's id and isAdmin flag
         if (booking.user.toString() === req.user._id || req.user.role === "Admin") {
             await Booking.findByIdAndDelete(req.params.id);
@@ -95,14 +103,16 @@ router.delete('/:id', verifyToken, async (req, res) => {
             }
             res.send('Booking deleted successfully');
         }else{
+            logger.info("Unauthorized: Cannot delete another user\'s booking unless admin")
             return res.status(401).send('Unauthorized: Cannot delete another user\'s booking unless admin');
         }
 
        
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
 
         if (error.kind === 'ObjectId') {
+            logger.info("Booking not found")
             return res.status(404).send('Booking not found');
         }
 

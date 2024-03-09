@@ -1,0 +1,7 @@
+{"level":"error","timestamp":"Mar-09-2024 19:02:02"}
+{"level":"error","timestamp":"Mar-09-2024 19:02:40"}
+{"level":"error","timestamp":"Mar-09-2024 19:03:13"}
+{"level":"error","message":"Illegal arguments: undefined, string","timestamp":"Mar-09-2024 19:03:28"}
+{"level":"error","message":"User validation failed: username: Path `username` is required., role: Path `role` is required.","timestamp":"Mar-09-2024 19:04:24"}
+{"level":"error","message":"Booking validation failed: room: Path `room` is required.","timestamp":"Mar-09-2024 19:09:14"}
+{"level":"error","message":"Cast to ObjectId failed for value \"65ec6692926095c1712b68167\" (type string) at path \"_id\" for model \"Booking\"","timestamp":"Mar-09-2024 19:09:46"}

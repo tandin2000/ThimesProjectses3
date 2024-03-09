@@ -3,6 +3,7 @@ const { verifyToken, checkRole } = require('../middleware/authMiddleware');
 const Timetable = require('../models/Timetable');
 const router = express.Router();
 const Notification = require("../models/Notification");
+const logger = require('../logger');
 
 function convertISODateToDayMonthYear(isoDateString) {
     // Create a new Date object from the ISO string
@@ -33,6 +34,7 @@ router.post('/', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, res
         // Make sure that `time` is a valid date string
         const parsedTime = new Date(time);  //ISO 8601 format
         if (isNaN(parsedTime.getTime())) {
+            logger.info('Invalid time format')
             return res.status(400).send('Invalid time format');
         }
 
@@ -55,7 +57,7 @@ router.post('/', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, res
 
         res.send(session);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -67,6 +69,7 @@ router.put('/:id', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, r
     if (time) {
         const parsedTime = new Date(time);
         if (isNaN(parsedTime.getTime())) {
+            logger.info("Invalid time format")
             return res.status(400).send('Invalid time format');
         }
         req.body.time = parsedTime; // Update the time field in the request body to be the parsed Date object
@@ -74,7 +77,10 @@ router.put('/:id', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, r
     
     try {
         let session = await Timetable.findById(req.params.id);
-        if (!session) return res.status(404).send('Timetable not found');
+        if (!session) {
+            logger.info('Timetable not found')
+            return res.status(404).send('Timetable not found');
+        }
         const affectedUser = session.faculty.toString();
         session = await Timetable.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true }).populate('course', '_id name');
         if (affectedUser) {
@@ -86,7 +92,7 @@ router.put('/:id', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, r
         }
         res.send(session);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -95,7 +101,10 @@ router.put('/:id', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, r
 router.delete('/:id', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req, res) => {
     try {
         const session = await Timetable.findByIdAndDelete(req.params.id).populate('course', '_id name');
-        if (!session) return res.status(404).send('class not found');
+        if (!session) {
+            logger.info('class not found')
+            return res.status(404).send('class not found');
+        }
         const affectedUser = session.faculty.toString();
         if (affectedUser) {
             const notifications = {
@@ -107,7 +116,7 @@ router.delete('/:id', [verifyToken, checkRole(['Admin', 'Faculty'])], async (req
 
         res.send({ message: 'Timetable deleted successfully' });
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -118,7 +127,7 @@ router.get('/', verifyToken, async (req, res) => {
         const sessions = await Timetable.find().populate('course faculty', 'name username');
         res.send(sessions);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });

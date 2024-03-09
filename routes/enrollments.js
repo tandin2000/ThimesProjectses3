@@ -5,6 +5,7 @@ const Course = require('../models/Course');
 const User = require('../models/User');
 const Notification = require('../models/Notification')
 const router = express.Router();
+const logger = require('../logger');
 
 // Enroll in a course (Students)
 router.post('/', verifyToken, async (req, res) => {
@@ -12,20 +13,27 @@ router.post('/', verifyToken, async (req, res) => {
     try {
         const user = await User.findById(student);
         if (!user){
+            logger.info('User not found');
+
             return res.status(404).send('User not found');
         }
         if(user.role !== "Student"){
+            logger.info('Only applicable to Students');
             return res.status(400).send('Only applicable to Students');
         }
 
         const courseDetails = await Course.findById(course).exec();
         if (!courseDetails) {
+            logger.info('Course not found');
+
             return res.status(404).send('Course not found');
         }
 
 
         const existingEnrollment = await Enrollment.findOne({ student, course });
         if (existingEnrollment) {
+            logger.info('Student is already enrolled in this course.');
+
             return res.status(400).send('Student is already enrolled in this course.');
         }
 
@@ -38,7 +46,7 @@ router.post('/', verifyToken, async (req, res) => {
         await Notification.insertMany(notifications);
         res.status(201).send(enrollment);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -55,7 +63,7 @@ router.get('/my-enrollments', [verifyToken], async (req, res) => {
         const enrollments = await Enrollment.find({ student: studentId }).populate('course', 'name code');
         res.send(enrollments);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -67,7 +75,7 @@ router.get('/course/:courseId', [verifyToken, checkRole(['Faculty', 'Admin'])], 
         const enrollments = await Enrollment.find({ course: courseId }).populate('student course', 'username name');
         res.send(enrollments);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -84,6 +92,7 @@ router.delete('/:enrollmentId', [verifyToken, checkRole(['Admin', 'Faculty'])], 
         const deletedEnrollment = await Enrollment.findByIdAndDelete(enrollmentId).populate('course', '_id name');
 
         if (!deletedEnrollment) {
+            logger.info('Enrollment not found')
             return res.status(404).send('Enrollment not found');
         }
 
@@ -95,7 +104,7 @@ router.delete('/:enrollmentId', [verifyToken, checkRole(['Admin', 'Faculty'])], 
 
         res.status(200).send(`Enrollment deleted successfully.`);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });

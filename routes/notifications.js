@@ -1,6 +1,7 @@
 const express = require('express');
 const { verifyToken } = require('../middleware/authMiddleware');
 const Notification = require('../models/Notification');
+const logger = require('../logger');
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', verifyToken, async (req, res) => {
         const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
         res.send(notifications);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
@@ -21,7 +22,7 @@ router.put('/:id', verifyToken, async (req, res) => {
         const notification = await Notification.findByIdAndUpdate(req.params.id, { status: 'Read' }, { new: true });
         res.send(notification);
     } catch (error) {
-        console.error(error.message);
+        logger.error(error.message);
         res.status(500).send('Server error');
     }
 });
