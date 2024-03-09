@@ -59,10 +59,9 @@ router.put('/:id', [verifyToken, checkRole(['Admin'])], async (req, res) => {
 // Delete a course (Admin only)
 router.delete('/:id', [verifyToken, checkRole(['Admin'])], async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
+        const course = await Course.findByIdAndDelete(req.params.id);
         if (!course) return res.status(404).send('Course not found');
 
-        await course.remove();
         res.send({ message: 'Course deleted successfully' });
     } catch (error) {
         console.error(error.message);

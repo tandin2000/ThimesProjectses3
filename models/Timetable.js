@@ -7,7 +7,7 @@ const timetableSchema = new mongoose.Schema({
         required: true
     },
     time: {
-        type: String, // For simplicity, we're using a string. Consider a more complex structure for production.
+        type: Date,
         required: true
     },
     faculty: {
